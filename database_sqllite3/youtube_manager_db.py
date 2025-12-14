@@ -23,7 +23,7 @@ def list_all_videos():
     
     
 
-def upload_video(video_name, video_description):
+def upload_video(conn, cursor, video_name, video_description):
     cursor.execute(
         'INSERT INTO videos (name, "description") VALUES (?, ?)',
         (video_name, video_description)
