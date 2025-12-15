@@ -1,48 +1,69 @@
-import sqlite3
+from dotenv import load_dotenv
+import pymongo 
+from bson import ObjectId
+from bson.errors import InvalidId
+import os
 
-conn = sqlite3.connect('youtube_videos.db')
+load_dotenv()
 
-cursor = conn.cursor()
+MONGODB_URI = os.getenv("MONGODB_URI")  
+if not MONGODB_URI:
+    raise ValueError("MONGODB_URI not found. Put it in your .env file.")
 
-cursor.execute('''
-               CREATE TABLE IF NOT EXISTS videos (
-                   id INTEGER PRIMARY KEY, 
-                   name TEXT NOT NULL, 
-                   description TEXT NOT NULL
-               )
-               
-               ''')
+client = pymongo.MongoClient(MONGODB_URI)
+db = client["youtube_manager"]
+
+video_collection = db["videos"]
+
+print(video_collection)
+
 
 
 
 
 def list_all_videos():
-    list_of_videos= cursor.execute("SELECT * FROM videos").fetchall()
-    for video in list_of_videos:
-        print(f"ID: {video[0]}, Name: {video[1]}, Description: {video[2]}")
+    
+    videos_list= video_collection.find()
+    for video in videos_list:
+        print(f"ID: {video['_id']}, Name: {video['name']}, Description: {video['description']}")
     
     
 
 def upload_video( video_name, video_description):
-    cursor.execute(
-        'INSERT INTO videos (name, "description") VALUES (?, ?)',
-        (video_name, video_description)
-    )
-    conn.commit()
+    video_collection.insert_one({"name":video_name, "description": video_description})
+
+
+
 
 def update_video(video_id, video_new_name, video_new_description):
-    cursor.execute('UPDATE videos SET name = ? , description = ? where id = ?', (video_new_name,video_new_description,video_id))
-    conn.commit()
+    try:
+        input_id = ObjectId(video_id)        
+        video_collection.update_one({"_id": input_id}, {"$set": {"name": video_new_name, "description": video_new_description}})
+        
+    except InvalidId:
+        print("Invalid MongoDB id format.")
+        return
+
 
 def delete_video(video_id):
-    cursor.execute('DELETE FROM videos WHERE id = ? ', (video_id,))
-    conn.commit()
+    try:
+        delete_id = ObjectId(video_id)   # ✅ correct
+    except InvalidId:
+        print("Invalid MongoDB id format.")
+        return
+
+    video_collection.delete_one({"_id": delete_id})
+
+
+
+
+
+
 
 
 def main():
-
-
-    while True: 
+    
+     while True: 
 
         print("\n Youtube Manager | Choose an option:")
         print("1. List all videos")
@@ -78,11 +99,6 @@ def main():
             case _:
                 print("Invalid choice. Please enter a number between 1 and 5.")
 
-    conn.close()
 
-
-
-
-if __name__ == "__main__" :
-    
+if __name__== "__main__" :
     main()
